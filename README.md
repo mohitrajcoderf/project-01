@@ -1,8 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Project-01
 
-## Getting Started
-
-First, run the development server:
+Create beutiful gradient wallpaper with customizable colors, text, and effects. Built with Next.js 15, TypeScript, and Tailwind CSS.
 
 ```bash
 npm run dev
