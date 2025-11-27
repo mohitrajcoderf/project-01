@@ -307,7 +307,7 @@ export default function DesktopApp({
         {/* controls */}
         <section className="w-full bg-secondary border-primary/20 rounded-3xl flex flex-col no-scrollbar overflow-hidden h-full">
           <AnimatePresence custom={direction} mode="wait">
-          <motion.div className="flex flex-col overflow-y-auto justify-between no-scrollbar relative h-full">
+            <motion.div className="flex flex-col overflow-y-auto justify-between no-scrollbar relative h-full">
               <Tabs
                 value={activeTab}
                 onValueChange={(value) =>
@@ -321,7 +321,6 @@ export default function DesktopApp({
                       key={tab}
                       value={tab}
                       className="flex-1 relative"
-                      disabled={tab === "colors" && !!backgroundImage}
                     >
                       {tab.charAt(0).toUpperCase() + tab.slice(1)}
                       {activeTab === tab && (
@@ -467,7 +466,7 @@ export default function DesktopApp({
                   </div>
 
                   <div className="flex flex-col gap-2 w-full">
-                  <label className="text-sm text-muted-foreground">
+                    <label className="text-sm text-muted-foreground">
                       Text Decoration
                     </label>
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar rounded-xl">
@@ -531,39 +530,41 @@ export default function DesktopApp({
                   </div>
 
                   <div className="flex flex-col gap-4 overflow-y-auto h-full no-scrollbar p-4">
-                    <div className="flex flex-col gap-2">
-                      <label className="text-sm text-muted-foreground">
-                        Gradient Colors
-                      </label>
-                      {circles.map((circle, i) => (
-                        <div
-                          key={i}
-                          className="flex items-start gap-2 relative w-full"
-                        >
+                    {!backgroundImage && (
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm text-muted-foreground">
+                          Gradient Colors
+                        </label>
+                        {circles.map((circle, i) => (
                           <div
-                            className="flex items-center gap-2 w-full"
-                            onClick={() => {
-                              setActiveColorType("gradient");
-                              setActiveColor(i);
-                              setActiveColorPicker(circle.color);
-                            }}
+                            key={i}
+                            className="flex items-start gap-2 relative w-full"
                           >
-                            <span
-                              className="size-5 rounded-xl cursor-pointer aspect-square"
-                              style={{
-                                backgroundColor: circle.color,
+                            <div
+                              className="flex items-center gap-2 w-full"
+                              onClick={() => {
+                                setActiveColorType("gradient");
+                                setActiveColor(i);
+                                setActiveColorPicker(circle.color);
                               }}
-                            />
-                            <Input
-                              type="text"
-                              value={circle.color}
-                              placeholder="Color"
-                              onChange={(e) => updateColor(e.target.value, i)}
-                            />
+                            >
+                              <span
+                                className="size-5 rounded-xl cursor-pointer aspect-square"
+                                style={{
+                                  backgroundColor: circle.color,
+                                }}
+                              />
+                              <Input
+                                type="text"
+                                value={circle.color}
+                                placeholder="Color"
+                                onChange={(e) => updateColor(e.target.value, i)}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="flex flex-col gap-2">
                       <label className="text-sm text-muted-foreground">
@@ -682,14 +683,14 @@ export default function DesktopApp({
                             "w-full rounded-xl px-4 py-2 text-sm relative",
                             "transition-colors duration-200 bg-background",
                             !backgroundImage &&
-                              blurOption.value === 0 &&
-                              "opacity-50 cursor-not-allowed"
+                            blurOption.value === 0 &&
+                            "opacity-50 cursor-not-allowed"
                           )}
                         >
                           <span>{blurOption.name}</span>
                           {blur === blurOption.value && (
                             <motion.div
-                               className="absolute inset-0 bg-primary/20 rounded-xl z-10"
+                              className="absolute inset-0 bg-primary/20 rounded-xl z-10"
                               layoutId="blur-background"
                             />
                           )}
@@ -761,7 +762,7 @@ export default function DesktopApp({
                       const currentIndex = filteredResolutions.findIndex(
                         (r) => r.width === resolution.width
                       );
-                      const nextIndex = 
+                      const nextIndex =
                         (currentIndex + 1) % filteredResolutions.length;
                       setResolution(filteredResolutions[nextIndex]);
                     }}
@@ -868,11 +869,11 @@ export default function DesktopApp({
                 className="absolute inset-0"
                 style={{
                   backgroundColor: backgroundImage
-                  ? "transparent"
-                  : backgroundColor,
+                    ? "transparent"
+                    : backgroundColor,
                 }}
               />
-              
+
               {/* Image/Gradient Layer */}
               {!backgroundImage ? (
                 <div
@@ -882,9 +883,8 @@ export default function DesktopApp({
                   <svg
                     className="w-full h-full"
                     style={{
-                      filter: `blur(${
-                        (blur * resolution.width) / 1920
-                      }px) brightness(${brightness}%) contrast(${contrast}%)
+                      filter: `blur(${(blur * resolution.width) / 1920
+                        }px) brightness(${brightness}%) contrast(${contrast}%)
                       saturate(${saturation}%)`,
                       transform: "translate3d(0,0,0)",
                       backfaceVisibility: "hidden",
@@ -906,9 +906,8 @@ export default function DesktopApp({
                     backgroundImage: `url(${backgroundImage})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
-                    filter: `blur(${
-                      (blur * resolution.width) / 1920
-                    }px) brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`,
+                    filter: `blur(${(blur * resolution.width) / 1920
+                      }px) brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`,
                     transform: "translate3d(0,0,0)",
                     backfaceVisibility: "hidden",
                     WebkitBackfaceVisibility: "hidden",
@@ -927,9 +926,8 @@ export default function DesktopApp({
                   style={{
                     fontSize: `${(fontSize * resolution.width) / 1920}px`,
                     fontWeight,
-                    letterSpacing: `${
-                      (letterSpacing * resolution.width) / 1920
-                    }em`,
+                    letterSpacing: `${(letterSpacing * resolution.width) / 1920
+                      }em`,
                     fontFamily,
                     opacity: opacity / 100,
                     lineHeight: `${(lineHeight * resolution.width) / 1920}em`,
@@ -937,14 +935,13 @@ export default function DesktopApp({
                     textAlign: "center",
                     maxWidth: "90%",
                     fontStyle: isItalic ? "italic" : "normal",
-                    textDecoration: `${isUnderline ? "underline" : ""} ${
-                      isStrikethrough ? "line-through" : ""
-                    }`.trim(),
+                    textDecoration: `${isUnderline ? "underline" : ""} ${isStrikethrough ? "line-through" : ""
+                      }`.trim(),
                   }}
                 >
                   {text}
                 </p>
-              </div> 
+              </div>
             </div>
           </div>
         </motion.div>

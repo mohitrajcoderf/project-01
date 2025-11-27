@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
-import gradientWallpaper from "@/public/gradient-wall.png";
+import gradientWallpaper from "@/public/gradii-logo.png";
 import { IMAGES } from "@/assets";
 import Marquee from "../ui/marquee";
 import Link from "next/link";
@@ -119,7 +119,7 @@ export default function MobileUI() {
 
                 <div className="bg-muted/50 p-4 rounded-lg">
                     <p className="text-sm text-muted-foreground">
-                        <span className="font-semibold">Note:</span> Gradiiii is currently in
+                        <span className="font-semibold">Note:</span> Gradii is currently in
                         alpha (v0.3) and only supports desktop. I&apos;m actively working on
                         expanding compatibility to mobile devices. More features are coming
                         soon!
@@ -129,7 +129,7 @@ export default function MobileUI() {
                 <p className="text-sm text-muted-foreground mx-auto">
                     Found a bug or have feedback? Feel free to{" "}
                     <Link
-                        href="https://x.com/MohitRaj_IN"
+                        href="https://x.com/kshvbgde"
                         target="_blank"
                         className="text-primary hover:underline"
                     >
@@ -140,4 +140,4 @@ export default function MobileUI() {
             </motion.div>
         </main>
     );
-}
+}    
