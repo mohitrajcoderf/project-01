@@ -1,39 +1,91 @@
-import { Moon, Sun } from "lucide-react";
+"use client";
+
+import { cn } from "@/lib/utils";
+
+import { Monitor, Moon, Sun } from "lucide-react";
 import { motion } from "motion/react";
 import { useTheme } from "next-themes";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-export function ThemeSwitch() {
+const themes = [
+    {
+        key: "system",
+        icon: Monitor,
+        label: "System theme",
+    },
+    {
+        key: "light",
+        icon: Sun,
+        label: "Light theme",
+    },
+    {
+        key: "dark",
+        icon: Moon,
+        label: "Dark theme",
+    },
+];
+
+export type ThemeSwitcherProps = {
+    className?: string;
+};
+
+export const ThemeSwitch = ({ className }: ThemeSwitcherProps) => {
     const { theme, setTheme } = useTheme();
-    const [hoveredButton, setHoveredButton] = useState<string | null>(null);
+    const [mounted, setMounted] = useState(false);
 
-    const handleMouseEnter = (button: string) => {
-        setHoveredButton(button);
+    // Prevent hydration mismatch
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) {
+        return null;
+    }
+
+    const handleChangeTheme = (newTheme: "light" | "dark" | "system") => {
+        if (newTheme === theme) return;
+        if (!document.startViewTransition) return setTheme(newTheme);
+        document.startViewTransition(() => setTheme(newTheme));
     };
 
     return (
-        <button
-            onMouseEnter={() => handleMouseEnter("theme")}
-            onMouseLeave={() => setHoveredButton(null)}
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            className={`w-full p-3 bg-background rounded-xl hover:text-primary/80 transition-colors duration-300 z-50 flex items-center border border-primary/10 ${hoveredButton === "theme" ? "gap-2" : ""
-                } relative`}
+        <div
+            className={cn(
+                "relative flex h-12 w-full items-center justify-between rounded-2xl border border-primary/10 bg-foreground/5 px-1 py-2",
+                className
+            )}
         >
-            <motion.span
-                initial={{ width: 0, opacity: 0, scale: 1 }}
-                animate={{
-                    width: hoveredButton === "theme" ? "auto" : 0,
-                    opacity: hoveredButton === "theme" ? 1 : 0,
-                }}
-                transition={{ duration: 0.2 }}
-                className="text-sm font-semibold tracking-tight overflow-hidden whitespace-nowrap"
-            >
-                {theme === "light" ? "Light" : "Dark"}
-            </motion.span>
-            <div className="relative w-5 h-5">
-                <Sun className="absolute size-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                <Moon className="absolute size-5 rotate-90 scale-0 transition-all dark: rotate-0 dark: scale-100" />
-            </div>
-        </button>
+            {themes.map(({ key, icon: Icon, label }) => {
+                const isActive = theme === key;
+
+                return (
+                    <button
+                        type="button"
+                        key={key}
+                        className="relative h-9 w-1/3 rounded-xl cursor-pointer"
+                        onClick={() =>
+                            handleChangeTheme(key as "light" | "dark" | "system")
+                        }
+                        aria-label={label}
+                    >
+                        {isActive && (
+                            <motion.div
+                                layoutId="activeTheme"
+                                className="absolute inset-0 rounded-xl bg-primary"
+                                transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
+                            />
+                        )}
+                        <Icon
+                            className={cn(
+                                "relative m-auto h-4 w-1/3 transition-colors duration-200",
+                                isActive
+                                    ? "text-primary-foreground"
+                                    : "text-muted-foreground hover:text-foreground"
+                            )}
+                        />
+                    </button>
+                );
+            })}
+        </div>
     );
-}
+};

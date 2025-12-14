@@ -1,114 +1,101 @@
-"use client";
-
 import { Input } from "@/components/ui/input";
-import { DownloadIcon, Loader2Icon, SettingsIcon } from "lucide-react";
+import {
+  DownloadIcon,
+  Trash2Icon,
+  UploadIcon,
+  PaintbrushIcon,
+  SparklesIcon,
+  ItalicIcon,
+  UnderlineIcon,
+  StrikethroughIcon,
+  WandSparklesIcon,
+  ZoomInIcon,
+  ZoomOutIcon,
+  AlignLeftIcon,
+  AlignCenterIcon,
+  AlignRightIcon,
+  Undo,
+  CopyIcon,
+  PlusIcon,
+  ExpandIcon,
+  ChevronRight,
+  ShuffleIcon,
+  RotateCcwIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+} from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { motion, AnimatePresence, Variants } from "motion/react";
 import { HexColorPicker } from "react-colorful";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 import {
-  BLUR_OPTIONS,
-  CircleProps,
-  FontOption,
-  RESOLUTIONS,
-} from "@/lib/constants";
-import { ButtonsChin } from "../ui/buttonsChin";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { AppProps, RESOLUTION_PRESETS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import logo from "@/public/logo.svg";
-import { ThemeSwitch } from "../ui/themeSwitch";
-import { generateRandomShape, renderShape } from "@/lib/utils/shapes";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
 import Image from "next/image";
+import { Textarea } from "../ui/textarea";
+import { CanvasPreview } from "./canvas-preview";
+import { toast } from "sonner";
+import { Separator } from "../ui/separator";
+import { Button } from "../ui/button";
+import {
+  DndContext,
+  useDraggable,
+  useSensor,
+  useSensors,
+  MouseSensor,
+  TouchSensor,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import { PositionControl } from "@/components/ui/position-control";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import SettingsDrawerContent from "../drawer-content/settings-drawer-content";
+import TwitterIcon from "@/lib/icons/twitter";
+import Link from "next/link";
+import { motion } from "motion/react";
+import VaulDrawer from "../ui/drawer";
+function DraggablePreview({
+  children,
+  id,
+}: {
+  children: React.ReactNode;
+  id: string;
+}) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id,
+  });
 
-interface DesktopAppProps {
-  backgroundColor: string;
-  fontSize: number;
-  fontWeight: number;
-  letterSpacing: number;
-  fontFamily: string;
-  opacity: number;
-  lineHeight: number;
-  text: string;
-  circles: CircleProps[];
-  filterIntensity: number;
-  filterStyle: React.CSSProperties;
-  textColor: string;
-  generateNewPalette: () => void;
-  isGenerating: boolean;
-  downloadImage: () => void;
-  isDownloading: boolean;
-  previousCircles: CircleProps[];
-  setCircles: (circles: CircleProps[]) => void;
-  setPreviousCircles: (circles: CircleProps[]) => void;
-  setActiveTab: (tab: "text" | "colors" | "effects") => void;
-  activeTab: "text" | "colors" | "effects";
-  setText: (text: string) => void;
-  setFontFamily: (fontFamily: string) => void;
-  setFontSize: (fontSize: number) => void;
-  setFontWeight: (fontWeight: number) => void;
-  setLetterSpacing: (letterSpacing: number) => void;
-  setOpacity: (opacity: number) => void;
-  setLineHeight: (lineHeight: number) => void;
-  setBackgroundColor: (backgroundColor: string) => void;
-  setActiveColorPicker: (color: string) => void;
-  handleColorChange: (color: string) => void;
-  setActiveColorType: (colorType: "gradient" | "background" | "text") => void;
-  setActiveColor: (color: number) => void;
-  updateColor: (color: string, index: number) => void;
-  fonts: FontOption[];
-  activeColorPicker: string;
-  filterType: "pastel" | "film" | "grain" | "static";
-  setFilterIntensity: (filterIntensity: number) => void;
-  setFilterType: (filterType: "pastel" | "film" | "grain" | "static") => void;
-  setTextColor: (textColor: string) => void;
-  resolution: (typeof RESOLUTIONS)[number];
-  setResolution: (res: (typeof RESOLUTIONS)[number]) => void;
-  saturation: number;
-  setSaturation: (value: number) => void;
-  contrast: number;
-  setContrast: (value: number) => void;
-  brightness: number;
-  setBrightness: (value: number) => void;
-  blur: number;
-  setBlur: (value: number) => void;
-  backgroundImage: string | null;
-  setBackgroundImage: (backgroundImage: string | null) => void;
-  handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  isItalic: boolean;
-  isUnderline: boolean;
-  isStrikethrough: boolean;
-  setIsItalic: (value: boolean) => void;
-  setIsUnderline: (value: boolean) => void;
-  setIsStrikethrough: (value: boolean) => void;
+  const style = transform
+    ? {
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    }
+    : undefined;
+
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+      {children}
+    </div>
+  );
 }
-
-const PREVIEW_DIMENSIONS = {
-  desktop: {
-    width: 768,
-    height: 432, // 16:9
-  },
-  mobile: {
-    width: 293,
-    height: 520,
-  },
-  square: {
-    width: 520,
-    height: 520, // 1:1
-  },
-} as const;
 
 export default function DesktopApp({
   blur,
@@ -122,11 +109,8 @@ export default function DesktopApp({
   lineHeight,
   text,
   circles,
-  filterIntensity,
-  filterStyle,
   textColor,
   generateNewPalette,
-  isGenerating,
   downloadImage,
   isDownloading,
   previousCircles,
@@ -149,9 +133,6 @@ export default function DesktopApp({
   updateColor,
   fonts,
   activeColorPicker,
-  filterType,
-  setFilterIntensity,
-  setFilterType,
   setTextColor,
   resolution,
   setResolution,
@@ -169,57 +150,36 @@ export default function DesktopApp({
   setIsItalic,
   setIsUnderline,
   setIsStrikethrough,
-}: DesktopAppProps) {
-  const slideVariants: Variants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? 1000 : -1000,
-      opacity: 0,
-    }),
-    center: {
-      zIndex: 1,
-      x: 0,
-      opacity: 1,
-    },
-    exit: (direction: number) => ({
-      zIndex: 0,
-      x: direction < 0 ? 1000 : -1000,
-      opacity: 0,
-    }),
-  };
+  numCircles,
+  setNumCircles,
+  colors,
+  isSafari,
+  textShadow,
+  setTextShadow,
+  grainIntensity,
+  setGrainIntensity,
+  isUploading,
+  setIsUploading,
+  textPosition,
+  setTextPosition,
+  sizeMode,
+  logoImage,
+  setTextMode,
+  setLogoImage,
+  textAlign,
+  setTextAlign,
+  copyImage,
+  isCopying,
+  handlePaletteChange,
+  resetPalette,
+}: AppProps) {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
 
-  const [[page, direction], setPage] = useState([0, 0]);
-  const tabIndex = ["text", "colors", "effects"].indexOf(activeTab);
-
-  useEffect(() => {
-    const newDirection = tabIndex > page ? 1 : -1;
-    setPage([tabIndex, newDirection]);
-  }, [tabIndex]);
-
-  const getPreviewScale = (resolution: (typeof RESOLUTIONS)[number]) => {
-    const container = PREVIEW_DIMENSIONS[aspectRatio];
-    const scaleX = container.width / resolution.width;
-    const scaleY = container.height / resolution.height;
-    return Math.min(scaleX, scaleY);
-  };
-
-  const [aspectRatio, setAspectRatio] = useState<
-    "desktop" | "mobile" | "square"
-  >("desktop");
-
-  const filteredResolutions = RESOLUTIONS.filter(
-    (r) => r.ratio === aspectRatio
-  );
-
-  useEffect(() => {
-    const resolutionsForRatio = RESOLUTIONS.filter(
-      (r) => r.ratio === aspectRatio
-    );
-    if (resolutionsForRatio.length > 0) {
-      setResolution(resolutionsForRatio[0]);
-    }
-  }, [aspectRatio]);
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBackgroundImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -230,26 +190,17 @@ export default function DesktopApp({
     }
   };
 
-  const memoizedShapes = useMemo(
-    () =>
-      circles.map((circle, i) => {
-        const shape = generateRandomShape(circle.color);
-        return (
-          <g
-            key={i}
-            style={{
-              transform: "translate3d(0,0,0)",
-              backfaceVisibility: "hidden",
-              WebkitBackfaceVisibility: "hidden",
-              willChange: "transform",
-              contain: "strict",
-            }}
-            dangerouslySetInnerHTML={{ __html: renderShape(shape) }}
-          />
-        );
-      }),
-    [circles]
-  );
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      setTextMode("image");
+    }
+  };
 
   const fontPreloadText = useMemo(() => {
     return fonts.map((font) => (
@@ -269,766 +220,1155 @@ export default function DesktopApp({
     ));
   }, [fonts, text]);
 
-  const getDynamicPreviewDimensions = (containerWidth: number) => {
-    const maxWidth = PREVIEW_DIMENSIONS[aspectRatio].width;
-    const maxHeight = PREVIEW_DIMENSIONS[aspectRatio].height;
-    const scale = Math.min(1, containerWidth / maxWidth);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(0.4);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 0,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    })
+  );
 
-    return {
-      width: maxWidth * scale,
-      height: maxHeight * scale,
-    };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { delta } = event;
+    if (delta) {
+      setPosition((prev) => ({
+        x: prev.x + delta.x,
+        y: prev.y + delta.y,
+      }));
+    }
   };
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [previewDimensions, setPreviewDimensions] = useState({
-    width: 0,
-    height: 0,
-  });
-
-  useEffect(() => {
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const availableWidth = entry.contentRect.width - 32;
-        setPreviewDimensions(getDynamicPreviewDimensions(availableWidth));
-      }
-    });
-
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
-    }
-
-    return () => resizeObserver.disconnect();
-  }, [aspectRatio]);
-
-  const [showDownloadingOverlay, setShowDownloadingOverlay] = useState(false);
-
-  useEffect(() => {
-    if (isDownloading) {
-      setShowDownloadingOverlay(true);
-    } else {
-      // Keep showing overlay for 1.5s after download completes
-      const timeout = setTimeout(() => {
-        setShowDownloadingOverlay(false);
-      }, 1500);
-      return () => clearTimeout(timeout);
-    }
-  }, [isDownloading]);
-
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
-    <main className="relative flex gap-2 items-center justify-center p-4 h-screen w-full">
+    <main className="relative flex gap-2 items-center justify-center p-2 h-screen w-full">
       <div aria-hidden="true" className="sr-only">
         {fontPreloadText}
       </div>
-      <motion.aside
-        initial={{ x: -100, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{
-          duration: 1,
-          ease: "easeInOut",
-          type: "spring",
-          damping: 20,
-          stiffness: 100,
-          mass: 0.5,
-        }}
-        className="flex flex-col gap-2 w-full max-w-[300px] min-w-[220px] h-full overflow-hidden"
-      >
-        <div className="flex items-center gap-2 p-2 bg-secondary rounded-2xl w-full border border-primary/10">
-          <div className="flex items-center gap-2 justify-between w-full">
-            <div className="flex items-center justify-between w-full outline-hidden focus:outline-hidden group">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <Image
-                    src={logo}
-                    alt="logo"
-                    className="size-8"
-                    priority
-                    loading="eager"
-                  />
-                  <p className="text-lg font-bold tracking-tighter">Gradii</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      <aside className="flex flex-col gap-1 w-full max-w-[260px] min-w-[220px] h-full overflow-hidden">
+        <div className="flex items-center justify-between gap-2 p-1 border border-primary/10 bg-secondary rounded-2xl">
+          <button
+            className="flex items-center gap-1 cursor-pointer p-1 hover:bg-foreground/5 transition-all duration-300 rounded-xl"
+            onClick={() => setIsSettingsOpen(true)}
+          >
+            <Image
+              src={logo}
+              alt="logo"
+              className="size-8"
+              priority
+              loading="eager"
+            />
+            <ChevronRight className="size-4" />
+          </button>
+          <Link
+            href="https://x.com/intent/tweet?text=Check%20out%20Gradii%20-%20A%20beautiful%20open-source%20gradient%20generator%20tool%0A%0Ahttps%3A%2F%2Fgithub.com%2Fkeshav-exe%2Fwallpaper-app"
+            target="_blank"
+          >
+            <Button variant="ghost" size="icon">
+              <TwitterIcon className="size-4 " />
+            </Button>
+          </Link>
+
+          <VaulDrawer
+            isOpen={isSettingsOpen}
+            setIsOpen={setIsSettingsOpen}
+            title="Settings"
+            className="w-full max-w-sm bg-transparent p-2 top-0 bottom-0"
+            direction="left"
+          >
+            <SettingsDrawerContent setIsSettingsOpen={setIsSettingsOpen} />
+          </VaulDrawer>
         </div>
         <Tabs
           value={activeTab}
           onValueChange={(value) =>
-            setActiveTab(value as "text" | "colors" | "effects")
+            setActiveTab(value as "design" | "canvas" | "effects")
           }
-          className="flex flex-col items-center z-50 w-full bg-secondary rounded-2xl p-2 border border-primary/10"
+          className="flex flex-col items-center w-full"
         >
           <TabsList className="w-full flex items-center gap-1">
-            {["text", "colors", "effects"].map((tab) => (
-              <TabsTrigger key={tab} value={tab} className="flex-1 relative">
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                {activeTab === tab && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute inset-0 bg-primary/10 rounded-xl"
-                    transition={{ type: "spring", duration: 0.5 }}
-                  />
-                )}
-              </TabsTrigger>
-            ))}
+            <div className="flex items-center gap-1 w-full">
+              {[
+                { id: "design", icon: PaintbrushIcon },
+                { id: "effects", icon: SparklesIcon },
+              ].map(({ id, icon: Icon }) => (
+                <TabsTrigger
+                  key={id}
+                  value={id}
+                  className={cn(
+                    "flex-1 relative w-full px-4 py-3 cursor-pointer hover:bg-foreground/25 transition-all duration-300 rounded-2xl text-foreground border border-primary/10 flex items-center gap-2"
+                  )}
+                  disabled={!!backgroundImage && id === "colors"}
+                >
+                  <Icon className="size-4" />
+                  <span className="text-xs tracking-tight capitalize">
+                    {id}
+                  </span>
+                </TabsTrigger>
+              ))}
+            </div>
           </TabsList>
         </Tabs>
 
         {/* controls */}
-        <section className="w-full bg-secondary rounded-2xl flex flex-col no-scrollbar overflow-hidden h-full  border border-primary/10">
-          <AnimatePresence custom={direction} mode="wait">
-            <motion.div className="flex flex-col overflow-y-auto justify-between no-scrollbar relative h-full gap-2 p-4">
-              {activeTab === "text" && (
-                <motion.div
-                  key={activeTab}
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{
-                    x: { type: "spring", stiffness: 300, damping: 30 },
-                    opacity: { duration: 0.3 },
-                  }}
-                  className="flex flex-col gap-4"
-                >
+        <section className="w-full bg-secondary rounded-2xl flex flex-col no-scrollbar overflow-hidden h-full  border border-primary/10 relative">
+          <div className="flex flex-col overflow-y-auto justify-between no-scrollbar relative h-full gap-2 p-2">
+            {activeTab === "design" && (
+              <motion.div
+                key={activeTab}
+                className="flex flex-col gap-8"
+                initial={{ y: 10 }}
+                animate={{ y: 0 }}
+                exit={{ y: -10 }}
+                transition={{
+                  duration: 0.2,
+                  type: "spring",
+                  damping: 10,
+                  stiffness: 100,
+                   
+                }}
+              >
+                <div className="flex flex-col gap-4 w-full">
                   <div className="flex flex-col gap-2 w-full">
-                    <label className="text-sm text-muted-foreground">
-                      Text
-                    </label>
-                    <Input
-                      type="text"
+                    <Textarea
+                      className={cn(
+                        "resize-none whitespace-pre-wrap",
+                        sizeMode === "image" && "opacity-50 cursor-not-allowed"
+                      )}
                       value={text}
                       onChange={(e) => setText(e.target.value)}
                       placeholder="Enter text"
+                      disabled={sizeMode === "image"}
                     />
                   </div>
 
-                  <div className="flex flex-col gap-2 w-full">
-                    <label className="text-sm text-muted-foreground">
-                      Font Family
-                    </label>
-                    <Select value={fontFamily} onValueChange={setFontFamily}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select font" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fonts.map((font) => (
-                          <SelectItem key={font.name} value={font.name}>
-                            {font.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <div className="relative">
+                    <div className="flex items-center justify-center">
+                      <span className="bg-secondary px-2 text-xs text-muted-foreground">
+                        or
+                      </span>
+                    </div>
+                    <div className="relative flex flex-col gap-2 pt-2">
+                      <label
+                        className={`px-4 py-2 bg-foreground/5 rounded-xl hover:text-foreground/80 text-primary transition-all duration-300 flex items-center gap-2 cursor-pointer justify-center border border-primary/10  ${isUploading ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
+                      >
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            if (isUploading) return;
+                            setIsUploading(true);
+                            try {
+                              await handleImageUpload(e);
+                            } finally {
+                              setIsUploading(false);
+                              e.target.value = "";
+                            }
+                          }}
+                          className="hidden"
+                          disabled={isUploading}
+                        />
+                        {isUploading ? (
+                          <span className="animate-pulse">Uploading...</span>
+                        ) : (
+                          <>
+                            <UploadIcon className="size-4" />
+                            <span className="text-xs tracking-tight">
+                              {logoImage ? "Change Image" : "Upload Image"}
+                            </span>
+                          </>
+                        )}
+                      </label>
 
-                  <div className="flex flex-col gap-2 w-full">
-                    <label className="text-sm text-muted-foreground">
-                      Font Size
-                    </label>
-                    <Slider
-                      min={12}
-                      max={180}
-                      step={2}
-                      value={[fontSize]}
-                      onValueChange={([value]) => setFontSize(value)}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {fontSize}px
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2 w-full">
-                    <label className="text-sm text-muted-foreground">
-                      Font Weight
-                    </label>
-                    <Slider
-                      min={100}
-                      max={900}
-                      step={100}
-                      value={[fontWeight]}
-                      onValueChange={([value]) => setFontWeight(value)}
-                      disabled={
-                        !fonts.find((f) => f.name === fontFamily)?.variable
-                      }
-                      className={cn(
-                        !fonts.find((f) => f.name === fontFamily)?.variable &&
-                        "cursor-not-allowed"
+                      {logoImage && (
+                        <Button
+                          onClick={() => {
+                            setLogoImage(null);
+                            setTextMode("text");
+                            setFontSize(10);
+                          }}
+                          variant="destructive"
+                        >
+                          <Trash2Icon className="size-4" />
+                          <span className="text-xs tracking-tight ml-2">
+                            Remove Image
+                          </span>
+                        </Button>
                       )}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {fontWeight}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col gap-2 w-full">
-                    <label className="text-sm text-muted-foreground">
-                      Letter Spacing
-                    </label>
-                    <Slider
-                      min={-0.1}
-                      max={0.1}
-                      step={0.01}
-                      value={[letterSpacing]}
-                      onValueChange={([value]) => setLetterSpacing(value)}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {letterSpacing}em
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col gap-2 w-full">
-                    <label className="text-sm text-muted-foreground">
-                      Text Opacity
-                    </label>
-                    <Slider
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={[opacity]}
-                      onValueChange={([value]) => setOpacity(value)}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {opacity}%
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col gap-2 w-full">
-                    <label className="text-sm text-muted-foreground">
-                      Line Height
-                    </label>
-                    <Slider
-                      min={0.5}
-                      max={2}
-                      step={0.1}
-                      value={[lineHeight]}
-                      onValueChange={([value]) => setLineHeight(value)}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {lineHeight}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col gap-2 w-full">
-                    <label className="text-sm text-muted-foreground">
-                      Text Decoration
-                    </label>
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar rounded-xl">
-                      <button
-                        onClick={() => setIsItalic(!isItalic)}
-                        className={cn(
-                          "w-full rounded-xl px-4 py-2 text-sm relative",
-                          "text-primary transition-all duration-300",
-                          isItalic ? "bg-primary/20 " : "bg-background"
-                        )}
-                      >
-                        <span className="italic">Italic</span>
-                      </button>
-                      <button
-                        onClick={() => setIsUnderline(!isUnderline)}
-                        className={cn(
-                          "w-full rounded-xl px-4 py-2 text-sm relative",
-                          "transition-all duration-300 text-primary",
-                          isUnderline ? "bg-primary/20" : "bg-background"
-                        )}
-                      >
-                        <span className="underline">Underline</span>
-                      </button>
-                      <button
-                        onClick={() => setIsStrikethrough(!isStrikethrough)}
-                        className={cn(
-                          "w-full rounded-xl px-4 py-2 text-sm relative",
-                          "transition-all duration-300 text-primary",
-                          isStrikethrough ? "bg-primary/20" : "bg-background"
-                        )}
-                      >
-                        <span className="line-through">Strikethrough</span>
-                      </button>
                     </div>
                   </div>
-                </motion.div>
-              )}
 
-              {activeTab === "colors" && (
-                <motion.div
-                  key={activeTab}
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{
-                    x: { type: "spring", stiffness: 300, damping: 30 },
-                    opacity: { duration: 0.3 },
-                  }}
-                  className="flex flex-col relative"
-                >
-                  <div className="w-full flex justify-center bg-linear-to-b from-secondary to-secondary/5 z-10 py-4">
-                    <HexColorPicker
-                      color={activeColorPicker}
-                      onChange={(color) => {
-                        setActiveColorPicker(color);
-                        handleColorChange(color);
+                  <Separator className="my-2" />
+
+                  {sizeMode === "text" && (
+                    <>
+                      <div className="flex flex-col gap-2 w-full">
+                        <label className="text-sm text-muted-foreground">
+                          Color
+                        </label>
+                        <div className="flex items-center gap-2 w-full relative">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <span
+                                className="w-6 h-6 rounded-full cursor-pointer aspect-square border border-primary/10 absolute left-2 top-1/2 -translate-y-1/2"
+                                style={{ backgroundColor: textColor }}
+                              />
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-auto p-3"
+                              align="start"
+                            >
+                              <HexColorPicker
+                                color={activeColorPicker}
+                                onChange={(color) => {
+                                  setActiveColorType("text");
+                                  setActiveColorPicker(color);
+                                  handleColorChange(color);
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <Input
+                            className="pl-10"
+                            type="text"
+                            value={
+                              textColor.startsWith("#")
+                                ? textColor
+                                : `#${textColor}`
+                            }
+                            placeholder="Color"
+                            onChange={(e) => {
+                              const color = e.target.value.startsWith("#")
+                                ? e.target.value
+                                : `#${e.target.value}`;
+                              setTextColor(color);
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm text-muted-foreground">
+                          Font
+                        </label>
+
+                        <div className="flex items-center gap-1">
+                          <Select value={fontFamily} onValueChange={setFontFamily}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select font" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {fonts.map((font) => (
+                                  <SelectItem key={font.name} value={font.name}>
+                                    <div style={{ fontFamily: `"${font.name}", sans-serif` }}>
+                                      {font.name}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+
+                          <Button
+                            type="button"
+                            size="icon"
+                            onClick={() => {
+                              const i = fonts.findIndex((f) => f.name === fontFamily);
+                              const prev = (i - 1 + fonts.length) % fonts.length;
+                              setFontFamily(fonts[prev].name);
+                            }}>
+                            <ChevronUpIcon className="size-4" />
+                          </Button>
+
+                          <Button
+                            type="button"
+                            size="icon"
+                            onClick={() => {
+                              const i = fonts.findIndex((f) => f.name === fontFamily);
+                              const next = (i + 1) % fonts.length;
+                              setFontFamily(fonts[next].name);
+                            }}>
+                            <ChevronDownIcon className="size-4" />
+
+                          </Button>
+                        </div>
+
+                      </div>
+                    </>
+                  )}
+                  {sizeMode === "text" && (
+                    <div className="flex flex-col gap-2 w-full">
+                      <label className="text-sm text-muted-foreground">
+                        Decoration
+                      </label>
+                      <div className="grid grid-cols-3 gap-1">
+                        <Button
+                          onClick={() => setTextAlign("left")}
+                          className={cn(
+                            textAlign === "left"
+                              ? "bg-primary/20"
+                              : "bg-background/5"
+                          )}
+                        >
+                          <AlignLeftIcon className="size-4" />
+                        </Button>
+                        <Button
+                          onClick={() => setTextAlign("center")}
+                          className={cn(
+                            textAlign === "center"
+                              ? "bg-primary/20"
+                              : "bg-background/5"
+                          )}
+                        >
+                          <AlignCenterIcon className="size-4" />
+                        </Button>
+                        <Button
+                          onClick={() => setTextAlign("right")}
+                          className={cn(
+                            textAlign === "right"
+                              ? "bg-primary/20"
+                              : "bg-background/5"
+                          )}
+                        >
+                          <AlignRightIcon className="size-4" />
+                        </Button>
+                        <Button
+                          onClick={() => setIsItalic(!isItalic)}
+                          className={cn(
+                            isItalic ? "bg-primary/20 " : "bg-background/5"
+                          )}
+                        >
+                          <ItalicIcon className="size-4" />
+                        </Button>
+                        <Button
+                          onClick={() => setIsUnderline(!isUnderline)}
+                          className={cn(
+                            isUnderline ? "bg-primary/20 " : "bg-background/5"
+                          )}
+                        >
+                          <UnderlineIcon className="size-4 mx-auto" />
+                        </Button>
+                        <Button
+                          onClick={() => setIsStrikethrough(!isStrikethrough)}
+                          className={cn(
+                            isStrikethrough
+                              ? "bg-primary/20"
+                              : "bg-background/5"
+                          )}
+                        >
+                          <StrikethroughIcon className="size-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  <Slider
+                    label={sizeMode === "text" ? "Size" : "Size"}
+                    min={sizeMode === "text" ? 0 : 10}
+                    max={sizeMode === "text" ? 20 : 100}
+                    step={sizeMode === "text" ? 0.1 : 1}
+                    value={[fontSize]}
+                    onValueChange={([value]) => setFontSize(value)}
+                    valueSubtext={sizeMode === "text" ? "em" : "%"}
+                  />
+                  {sizeMode === "text" && (
+                    <>
+                      <div className="flex flex-col gap-2 w-full">
+                        <Slider
+                          label="Weight"
+                          min={100}
+                          max={900}
+                          step={100}
+                          value={[fontWeight]}
+                          onValueChange={([value]) => setFontWeight(value)}
+                          disabled={
+                            !fonts.find((f) => f.name === fontFamily)?.variable
+                          }
+                          className={cn(
+                            !fonts.find((f) => f.name === fontFamily)
+                              ?.variable && "cursor-not-allowed"
+                          )}
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-2 w-full">
+                        <Slider
+                          label="Tracking"
+                          min={-0.1}
+                          max={0.1}
+                          step={0.01}
+                          value={[letterSpacing]}
+                          onValueChange={([value]) => setLetterSpacing(value)}
+                          valueSubtext="em"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-2 w-full">
+                        <Slider
+                          label="Leading"
+                          min={0.5}
+                          max={2}
+                          step={0.1}
+                          value={[lineHeight]}
+                          onValueChange={([value]) => setLineHeight(value)}
+                          valueSubtext="em"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <Slider
+                    label="Opacity"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={[opacity]}
+                    onValueChange={([value]) => setOpacity(value)}
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "effects" && (
+              <motion.div
+                key={activeTab}
+                className="flex flex-col gap-8"
+                initial={{ y: 10 }}
+                animate={{ y: 0 }}
+                exit={{ y: -10 }}
+                transition={{
+                  duration: 0.2,
+                  type: "spring",
+                  damping: 10,
+                  stiffness: 100,
+                   
+                }}
+              >
+                <div className="flex flex-col gap-4">
+                  <Slider
+                    label="Blur"
+                    min={backgroundImage ? 0 : 400}
+                    max={isSafari ? 800 : 1200}
+                    step={20}
+                    value={[blur]}
+                    valueSubtext="px"
+                    onValueChange={([value]) => setBlur(value)}
+                  />
+
+                  {!isSafari && (
+                    <>
+                      <div className="flex flex-col gap-4">
+                        <Slider
+                          label="Grain"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={[grainIntensity]}
+                          onValueChange={([value]) => {
+                            setGrainIntensity(value);
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <Separator className="my-2" />
+
+                  <Slider
+                    label="Saturation"
+                    min={0}
+                    max={200}
+                    step={1}
+                    value={[saturation]}
+                    onValueChange={([value]) => setSaturation(value)}
+                  />
+                  <Slider
+                    label="Contrast"
+                    min={5}
+                    max={200}
+                    step={1}
+                    value={[contrast]}
+                    onValueChange={([value]) => setContrast(value)}
+                  />
+                  <Slider
+                    label="Brightness"
+                    min={10}
+                    max={200}
+                    step={1}
+                    value={[brightness]}
+                    onValueChange={([value]) => setBrightness(value)}
+                  />
+
+                  <Separator className="my-2" />
+
+                  <label className="text-sm text-muted-foreground">Glow</label>
+                  <div className="flex items-center gap-2 w-full relative">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <span
+                          className="w-6 h-6 rounded-full cursor-pointer aspect-square border border-primary/10 absolute left-2 top-1/2 -translate-y-1/2"
+                          style={{ backgroundColor: textShadow.color }}
+                        />
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-3" align="start">
+                        <HexColorPicker
+                          color={textShadow.color}
+                          onChange={(color) =>
+                            setTextShadow((prev) => ({ ...prev, color }))
+                          }
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <Input
+                      className="pl-10"
+                      type="text"
+                      value={
+                        textShadow.color.startsWith("#")
+                          ? textShadow.color
+                          : `#${textShadow.color}`
+                      }
+                      placeholder="Glow Color"
+                      onChange={(e) => {
+                        const color = e.target.value.startsWith("#")
+                          ? e.target.value
+                          : `#${e.target.value}`;
+                        setTextShadow((prev) => ({
+                          ...prev,
+                          color: color,
+                        }));
                       }}
                     />
                   </div>
 
-                  <div className="flex flex-col gap-4 overflow-y-auto h-full no-scrollbar">
-                    {!backgroundImage && (
-                      <div className="flex flex-col gap-2">
-                        <label className="text-sm text-muted-foreground">
-                          Gradient Colors
-                        </label>
-                        {circles.map((circle, i) => (
-                          <div
-                            key={i}
-                            className="flex items-start gap-2 relative w-full"
-                          >
-                            <div
-                              className="flex items-center gap-2 w-full"
-                              onClick={() => {
-                                setActiveColorType("gradient");
-                                setActiveColor(i);
-                                setActiveColorPicker(circle.color);
-                              }}
-                            >
-                              <span
-                                className="size-5 rounded-xl cursor-pointer aspect-square"
-                                style={{
-                                  backgroundColor: circle.color,
-                                }}
-                              />
-                              <Input
-                                type="text"
-                                value={circle.color}
-                                placeholder="Color"
-                                onChange={(e) => updateColor(e.target.value, i)}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex flex-col gap-2">
-                      <label className="text-sm text-muted-foreground">
-                        Background Color
-                      </label>
-                      <div
-                        className="flex items-center gap-2"
-                        onClick={() => {
-                          setActiveColorType("background");
-                          setActiveColorPicker(backgroundColor);
-                        }}
-                      >
-                        <span
-                          className="size-5 rounded-xl cursor-pointer aspect-square border border-primary/60"
-                          style={{ backgroundColor: backgroundColor }}
-                        />
-                        <Input
-                          type="text"
-                          value={backgroundColor}
-                          placeholder="Color"
-                          onChange={(e) => setBackgroundColor(e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label className="text-sm text-muted-foreground">
-                        Text Color
-                      </label>
-                      <div
-                        className="flex  items-center gap-2"
-                        onClick={() => {
-                          setActiveColorType("text");
-                          setActiveColorPicker(textColor);
-                        }}
-                      >
-                        <span
-                          className="size-5 rounded-xl cursor-pointer aspect-square border border-primary/60"
-                          style={{
-                            backgroundColor: textColor,
-                          }}
-                        />
-                        <Input
-                          type="text"
-                          value={textColor}
-                          placeholder="Color"
-                          onChange={(e) => setTextColor(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {activeTab === "effects" && (
-                <motion.div
-                  key={activeTab}
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{
-                    x: { type: "spring", stiffness: 300, damping: 30 },
-                    opacity: { duration: 0.3 },
-                  }}
-                  className="flex flex-col gap-4"
-                >
                   <div className="flex flex-col gap-2">
-                    <label className="text-sm text-muted-foreground">
-                      Filter Type
-                    </label>
-                    <Select
-                      value={filterType}
-                      onValueChange={(
-                        value: "pastel" | "film" | "grain" | "static"
-                      ) => setFilterType(value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select filter type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pastel">Pastel</SelectItem>
-                        <SelectItem value="film">Film Grain</SelectItem>
-                        <SelectItem value="grain">Grain</SelectItem>
-                        <SelectItem value="static">Static</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm text-muted-foreground">
-                      Filter Intensity
-                    </label>
                     <Slider
+                      label="Intensity"
                       min={0}
                       max={100}
                       step={1}
-                      value={[filterIntensity]}
-                      onValueChange={([value]) => setFilterIntensity(value)}
+                      value={[textShadow.blur]}
+                      onValueChange={([value]) =>
+                        setTextShadow((prev) => ({
+                          ...prev,
+                          blur: value, // Store as percentage
+                        }))
+                      }
+                      valueSubtext="%"
                     />
-                    <span className="text-xs text-muted-foreground">
-                      {filterIntensity}%
-                    </span>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-sm text-muted-foreground">
-                      Blur
-                    </label>
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar rounded-xl">
-                      {BLUR_OPTIONS.map((blurOption) => (
-                        <button
-                          key={blurOption.value}
-                          onClick={() => setBlur(blurOption.value)}
-                          disabled={!backgroundImage && blurOption.value === 0}
-                          className={cn(
-                            "w-full rounded-xl px-4 py-2 text-sm relative",
-                            "transition-colors duration-200 bg-background",
-                            !backgroundImage &&
-                            blurOption.value === 0 &&
-                            "opacity-50 cursor-not-allowed"
-                          )}
-                        >
-                          <span>{blurOption.name}</span>
-                          {blur === blurOption.value && (
-                            <motion.div
-                              className="absolute inset-0 bg-primary/20 rounded-xl z-10"
-                              layoutId="blur-background"
+                    <Slider
+                      label="Offset X"
+                      min={-20}
+                      max={20}
+                      step={1}
+                      value={[textShadow.offsetX]}
+                      onValueChange={([value]) =>
+                        setTextShadow((prev) => ({ ...prev, offsetX: value }))
+                      }
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Slider
+                      label="Offset Y"
+                      min={-20}
+                      max={20}
+                      step={1}
+                      value={[textShadow.offsetY]}
+                      onValueChange={([value]) =>
+                        setTextShadow((prev) => ({ ...prev, offsetY: value }))
+                      }
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+          <div className="flex w-full gap-2 p-2 sticky bottom-0  border-t border-primary/10  z-10">
+            <Button
+              className="flex items-center w-full"
+              variant="accent"
+              onClick={downloadImage}
+              disabled={isDownloading}
+            >
+              <DownloadIcon className="size-4" />
+              <span className="text-sm">Download</span>
+            </Button>
+
+            <Button onClick={copyImage} disabled={isCopying} className="w-fit">
+              <CopyIcon className="size-4" />
+            </Button>
+          </div>
+        </section>
+      </aside>
+
+      {/* preview section */}
+      <section
+        ref={containerRef}
+        className="flex flex-col gap-4 w-full h-full items-center justify-center relative bg-secondary rounded-2xl border border-primary/10 overflow-hidden"
+      >
+        <div className="absolute bottom-4 right-0 left-0 flex items-center gap-2 z-10 justify-center">
+          <Button
+            variant="accent"
+            className="w-fit"
+            onClick={() => {
+              const hasSeenWarning = localStorage.getItem(
+                "generate-warning-seen"
+              );
+              if (!hasSeenWarning) {
+                setShowGenerateConfirm(true);
+                return;
+              }
+              handlePaletteChange();
+              setBackgroundImage(null);
+              if (blur === 0) {
+                setBlur(600);
+              }
+              setIsGenerating(true);
+              setTimeout(() => {
+                setIsGenerating(false);
+              }, 2000);
+            }}
+            disabled={isGenerating}
+          >
+            <WandSparklesIcon className="size-5" />
+            Generate
+          </Button>
+          <Button
+            className="w-fit"
+            onClick={() => {
+              generateNewPalette();
+              setIsGenerating(true);
+              setTimeout(() => {
+                setIsGenerating(false);
+              }, 2000);
+            }}
+            disabled={numCircles >= 10}
+          >
+            <ShuffleIcon className="size-5" />
+            Shuffle
+          </Button>
+          <Button
+            onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}
+            className="w-fit"
+          >
+            <ZoomInIcon className="size-5" />
+          </Button>
+          <Button
+            onClick={() => setZoom((z) => Math.max(z - 0.1, 0.1))}
+            className="w-fit"
+          >
+            <ZoomOutIcon className="size-5" />
+          </Button>
+          <Button
+            disabled={previousCircles.length === 0}
+            className="w-fit"
+            onClick={() => {
+              setBackgroundImage(null);
+              if (previousCircles.length > 0) {
+                setCircles(previousCircles);
+                setPreviousCircles([]);
+              }
+            }}
+          >
+            {backgroundImage ? (
+              <Trash2Icon className="size-5" />
+            ) : (
+              <Undo className="size-5" />
+            )}
+          </Button>
+        </div>
+
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <div className="rounded-2xl overflow-hidden w-full h-full flex items-center justify-center relative ">
+            <DraggablePreview id="preview">
+              <div
+                className="relative overflow-hidden rounded-2xl cursor-grab active:cursor-grabbing"
+                style={{
+                  height: resolution.height * zoom,
+                  width: resolution.width * zoom,
+                  transform: `translate(${position.x}px, ${position.y}px)`,
+                }}
+              >
+                <div
+                  id="wallpaper"
+                  style={{
+                    width: `${resolution.width}px`,
+                    height: `${resolution.height}px`,
+                    transform: `scale(${zoom})`,
+                    transformOrigin: "top left",
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
+                  }}
+                >
+                  {isGenerating ? (
+                    <div className="absolute inset-0 bg-background z-50 flex items-center justify-center">
+                      <WandSparklesIcon className="size-16 text-primary animate-ping" />
+                    </div>
+                  ) : (
+                    <>
+                      <CanvasPreview />
+                      <div className="absolute inset-0 flex items-center justify-center z-40">
+                        {sizeMode === "text" ? (
+                          <p
+                            style={{
+                              fontSize: `${fontSize}em`,
+                              fontWeight: fontWeight,
+                              letterSpacing: `${letterSpacing}em`,
+                              fontFamily: fontFamily,
+                              opacity: opacity / 100,
+                              lineHeight: lineHeight,
+                              color: textColor,
+                              fontStyle: isItalic ? "italic" : "normal",
+                              textDecoration: `${isUnderline ? "underline" : ""
+                                } ${isStrikethrough ? "line-through" : ""
+                                }`.trim(),
+                              textShadow: `${textShadow.offsetX}px ${textShadow.offsetY}px ${textShadow.blur}px ${textShadow.color}`,
+                              transform: `translate(${textPosition.x}px, ${textPosition.y}px)`,
+                              whiteSpace: "pre-wrap",
+                              textWrap: "nowrap",
+                              textAlign: textAlign,
+                            }}
+                            className="transition-all duration-300 ease-[cubic-bezier(0.45, 0.05, 0.55, 0.95)]"
+                          >
+                            {text}
+                          </p>
+                        ) : (
+                          logoImage && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={logoImage}
+                              className="transition-all duration-300 ease-[cubic-bezier(0.45, 0.05, 0.55, 0.95)]"
+                              alt="Logo"
+                              style={{
+                                maxWidth: `${fontSize}%`,
+                                maxHeight: `${fontSize}%`,
+                                opacity: opacity / 100,
+                                transform: `translate(${textPosition.x}px, ${textPosition.y}px)`,
+                                filter: `drop-shadow(${textShadow.offsetX}px ${textShadow.offsetY}px ${textShadow.blur}px ${textShadow.color})`,
+                              }}
                             />
-                          )}
-                        </button>
+                          )
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </DraggablePreview>
+          </div>
+        </DndContext>
+      </section>
+
+      {/* right controls */}
+      <aside className="flex flex-col gap-2 w-full max-w-[260px] min-w-[200px] h-full overflow-hidden">
+        <div className="flex flex-col gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button className="w-full flex">
+                <div className="flex items-center gap-2 justify-between w-full">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-full min-w-4 min-h-4 border border-primary rounded"
+                      style={{
+                        aspectRatio: `${resolution.width}/${resolution.height}`,
+                      }}
+                    />
+
+                    <div className="flex flex-col gap-1">
+                      <p className="text-sm tracking-tight text-left">
+                        {RESOLUTION_PRESETS.find(
+                          (preset) =>
+                            preset.width === resolution.width &&
+                            preset.height === resolution.height
+                        )?.name || "Custom"}
+                      </p>
+                      <p className="text-xs text-muted-foreground text-left">
+                        {resolution.width}x{resolution.height}
+                      </p>
+                    </div>
+                  </div>
+
+                  <ExpandIcon
+                    className={`size-4 transition-all duration-300`}
+                  />
+                </div>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="max-w-lg w-full border border-primary/10 bg-secondary p-0 h-[400px] overflow-y-auto no-scrollbar rounded-2xl">
+              <div className="flex items-center gap-2 p-4 border-b border-primary/10 sticky top-0 bg-secondary">
+                <div className="flex flex-col w-full gap-1 relative">
+                  <label className="text-xs text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2">
+                    W:
+                  </label>
+                  <Input
+                    className="pl-8"
+                    type="number"
+                    min={0}
+                    max={2560}
+                    defaultValue={resolution.width}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (value > 2560) {
+                        toast.error("Maximum width is 2560px");
+                        return;
+                      }
+                      e.target.value = value.toString();
+                    }}
+                    id="width-input"
+                  />
+                </div>
+                <div className="flex flex-col gap-1 w-full relative">
+                  <label className="text-xs text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2">
+                    H:
+                  </label>
+                  <Input
+                    className="pl-8"
+                    type="number"
+                    min={0}
+                    max={2560}
+                    defaultValue={resolution.height}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (value > 2560) {
+                        toast.error("Maximum height is 2560px");
+                        return;
+                      }
+                      e.target.value = value.toString();
+                    }}
+                    id="height-input"
+                  />
+                </div>
+                <Button
+                  className="w-fit"
+                  variant="accent"
+                  onClick={() => {
+                    const width = parseInt(
+                      (
+                        document.getElementById(
+                          "width-input"
+                        ) as HTMLInputElement
+                      ).value
+                    );
+                    const height = parseInt(
+                      (
+                        document.getElementById(
+                          "height-input"
+                        ) as HTMLInputElement
+                      ).value
+                    );
+                    if (width > 2560 || height > 2560) {
+                      toast.error("Maximum dimensions are 2560px");
+                      return;
+                    }
+                    setResolution({ width, height });
+                  }}
+                >
+                  Apply
+                </Button>
+              </div>
+              <div className="flex flex-col gap-6 p-4">
+                {Array.from(
+                  new Set(RESOLUTION_PRESETS.map((preset) => preset.category))
+                ).map((category) => (
+                  <div key={category} className="flex flex-col gap-2">
+                    <p className="text-xs text-muted-foreground">{category}</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {RESOLUTION_PRESETS.filter(
+                        (preset) => preset.category === category
+                      ).map((preset) => (
+                        <div
+                          key={preset.name}
+                          onClick={() =>
+                            setResolution({
+                              width: preset.width,
+                              height: preset.height,
+                            })
+                          }
+                          className="flex flex-col items-center gap-4 cursor-pointer bg-foreground/5 rounded-xl p-2 border border-primary/10 hover:bg-foreground/10 transition-all duration-300 justify-between"
+                        >
+                          <div className="flex flex-col gap-2 items-center">
+                            <p className="tracking-tight text-left font-medium">
+                              {preset.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              ({preset.width}x{preset.height})
+                            </p>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm text-muted-foreground">
-                      Saturation
-                    </label>
-                    <Slider
-                      min={0}
-                      max={200}
-                      step={1}
-                      value={[saturation]}
-                      onValueChange={([value]) => setSaturation(value)}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {saturation}%
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm text-muted-foreground">
-                      Contrast
-                    </label>
-                    <Slider
-                      min={5}
-                      max={200}
-                      step={1}
-                      value={[contrast]}
-                      onValueChange={([value]) => setContrast(value)}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {contrast}%
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm text-muted-foreground">
-                      Brightness
-                    </label>
-                    <Slider
-                      min={10}
-                      max={200}
-                      step={1}
-                      value={[brightness]}
-                      onValueChange={([value]) => setBrightness(value)}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {brightness}%
-                    </span>
-                  </div>
-                </motion.div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </section>
-
-        <div className="flex flex-col items-center rounded-2xl w-full gap-4">
-          <div className="flex w-full gap-2">
-            <button
-              onClick={downloadImage}
-              className="w-full flex items-center justify-between gap-2 text-primary-foreground text-sm bg-primary rounded-2xl relative p-4 cursor-pointer border border-primary/10"
-              disabled={isDownloading}
-            >
-              <div className="flex items-center gap-2">
-                <DownloadIcon className="size-4" />
-                <span className="">Export</span>
+                ))}
               </div>
-              <span className="text-secondary text-sm w-fit">
-                {resolution.scale}x
-              </span>
-            </button>
-
-            <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-              <DropdownMenuTrigger asChild>
-                <button className="p-4 relative items-center justify-center bg-primary rounded-2xl text-primary-foreground border border-primary/10">
-                  <motion.span
-                    animate={{ rotate: isOpen ? 45 : 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <SettingsIcon className="size-4" />
-                  </motion.span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="rounded-2xl p-3 bg-background/50 backdrop-blur-md"
-              >
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs text-muted-foreground">
-                    Image Resolution
-                  </label>
-                  <Tabs
-                    defaultValue={resolution.scale.toString()}
-                    className="flex flex-col items-center w-full  rounded-xl"
-                  >
-                    <TabsList className="w-full flex items-center gap-1">
-                      {filteredResolutions.map((res) => (
-                        <TabsTrigger
-                          key={res.width}
-                          value={res.scale.toString()}
-                          onClick={() => setResolution(res)}
-                          className="flex-1 relative rounded-md text-xl flex flex-col items-center justify-center w-full bg-secondary hover:bg-background/50 transition-colors duration-200"
-                        >
-                          {res.name}
-                          {resolution.scale === res.scale && (
-                            <motion.div
-                              layoutId="activeResolution"
-                              className="absolute inset-0 bg-primary/10 rounded-md"
-                              transition={{ type: "spring", duration: 0.5 }}
-                            />
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            {res.scale}x
-                          </span>
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </Tabs>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+            </PopoverContent>
+          </Popover>
         </div>
-      </motion.aside>
-
-      {/* preview section */}
-      <motion.section
-        ref={containerRef}
-        className="flex flex-col gap-4 w-full h-full items-center justify-center relative bg-secondary rounded-2xl border border-primary/10"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{
-          duration: 1,
-          ease: "easeInOut",
-          type: "spring",
-          damping: 20,
-          stiffness: 100,
-          mass: 0.5,
-        }}
-      >
-        <div className="absolute top-2 right-2">
-          <ThemeSwitch />
-        </div>
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{
-            duration: 1,
-            ease: "easeInOut",
-            type: "spring",
-            damping: 20,
-            stiffness: 100,
-            mass: 0.5,
-          }}
-          className="rounded-2xl overflow-hidden w-full max-w-3xl flex items-center justify-center relative"
-        >
-          <div
-            className="relative w-full overflow-hidden rounded-2xl max-h-[95vh] border border-primary/10"
-            style={{
-              width:
-                previewDimensions.width ||
-                PREVIEW_DIMENSIONS[aspectRatio].width,
-              height:
-                previewDimensions.height ||
-                PREVIEW_DIMENSIONS[aspectRatio].height,
-            }}
-          >
-            <div
-              className="absolute inset-0 object-center overflow-hidden"
-              id="wallpaper"
-              style={{
-                width: `${resolution.width}px`,
-                height: `${resolution.height}px`,
-                transform: `scale(${getPreviewScale(resolution)})`,
-                transformOrigin: "top left",
-                backfaceVisibility: "hidden",
-                WebkitBackfaceVisibility: "hidden",
-              }}
-            >
-              {/* Background Layer */}
-              <div
-                className="absolute inset-0"
-                style={{
-                  backgroundColor: backgroundImage
-                    ? "transparent"
-                    : backgroundColor,
-                }}
-              />
-
-              {/* Image/Gradient Layer */}
-              {!backgroundImage ? (
-                <div
-                  className="absolute inset-0"
-                  style={{ contain: "paint layout" }}
-                >
-                  <svg
-                    className="w-full h-full"
-                    style={{
-                      filter: `blur(${(blur * resolution.width) / 1920
-                        }px) brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`,
-                      transform: "translate3d(0,0,0)",
-                      backfaceVisibility: "hidden",
-                      WebkitBackfaceVisibility: "hidden",
-                      willChange: "transform filter",
-                      contain: "strict",
+        <div className="flex flex-col gap-4 overflow-y-auto h-full no-scrollbar rounded-2xl bg-secondary border border-primary/10 p-2">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2 w-full">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm text-muted-foreground">
+                  Background
+                </label>
+                <div className="flex items-center gap-2 relative">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <span
+                        className="w-6 h-6 rounded-full cursor-pointer aspect-square border border-primary/10 absolute left-2 top-1/2 -translate-y-1/2"
+                        style={{ backgroundColor: backgroundColor }}
+                      />
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-3" align="start">
+                      <HexColorPicker
+                        color={activeColorPicker}
+                        onChange={(color) => {
+                          setActiveColorType("background");
+                          setActiveColorPicker(color);
+                          setBackgroundColor(color);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <Input
+                    type="text"
+                    value={
+                      backgroundColor.startsWith("#")
+                        ? backgroundColor
+                        : `#${backgroundColor}`
+                    }
+                    placeholder="Background Color"
+                    onChange={(e) => {
+                      const color = e.target.value.startsWith("#")
+                        ? e.target.value
+                        : `#${e.target.value}`;
+                      setBackgroundColor(color);
                     }}
-                    preserveAspectRatio="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 100 100"
-                  >
-                    {memoizedShapes}
-                  </svg>
+                    className={cn(
+                      "resize-none pl-10",
+                      backgroundImage && "opacity-50 cursor-not-allowed"
+                    )}
+                    disabled={!!backgroundImage}
+                  />
                 </div>
-              ) : (
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    backgroundImage: `url(${backgroundImage})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    filter: `blur(${(blur * resolution.width) / 1920
-                      }px) brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`,
-                    transform: "translate3d(0,0,0)",
-                    backfaceVisibility: "hidden",
-                    WebkitBackfaceVisibility: "hidden",
-                    willChange: "transform filter",
-                    contain: "paint layout",
-                  }}
-                />
-              )}
-
-              {/* Filter Effects Layer */}
-              <div className="absolute inset-0" style={filterStyle} />
-
-              {/* Text Layer */}
-              <div className="absolute inset-0 flex items-center justify-center z-10">
-                <p
-                  style={{
-                    fontSize: `${(fontSize * resolution.width) / 1920}px`,
-                    fontWeight,
-                    letterSpacing: `${(letterSpacing * resolution.width) / 1920
-                      }em`,
-                    fontFamily,
-                    opacity: opacity / 100,
-                    lineHeight: `${(lineHeight * resolution.width) / 1920}em`,
-                    color: textColor,
-                    textAlign: "center",
-                    maxWidth: "90%",
-                    fontStyle: isItalic ? "italic" : "normal",
-                    textDecoration: `${isUnderline ? "underline" : ""} ${isStrikethrough ? "line-through" : ""
-                      }`.trim(),
-                  }}
-                >
-                  {text}
-                </p>
               </div>
             </div>
-            {/* Downloading Overlay */}
-            <motion.div
-              animate={{ opacity: showDownloadingOverlay ? 1 : 0 }}
-              exit={{ opacity: 0 }}
-              transition={{
-                duration: 0.3,
-                ease: "easeInOut",
-                type: "spring",
-                damping: 20,
-                stiffness: 100,
-                mass: 0.5,
-              }}
-              className="absolute inset-0 bg-background z-50 flex items-center justify-center"
-            >
-              <Loader2Icon className="size-8 text-primary animate-spin" />
-            </motion.div>
-          </div>
-        </motion.div>
+            <div className="flex items-center justify-center">
+              <span className="bg-secondary px-2 text-xs text-muted-foreground">
+                or
+              </span>
+            </div>
+            <div className="relative">
+              <label
+                className={`px-4 py-2 bg-foreground/5 rounded-xl hover:text-foreground/80 text-primary transition-all duration-300 flex items-center gap-2 cursor-pointer justify-center border border-primary/10 ${isUploading ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+              >
+                <Input
+                  type="file"
+                  accept="image/*"
+                  key={backgroundImage ? "has-image" : "no-image"}
+                  onChange={async (e) => {
+                    if (isUploading) return;
+                    setIsUploading(true);
+                    try {
+                      await handleBackgroundImageUpload(e);
+                    } finally {
+                      setIsUploading(false);
+                      e.target.value = "";
+                    }
+                  }}
+                  className="hidden"
+                  disabled={isUploading}
+                />
+                {isUploading ? (
+                  <span className="animate-pulse">Uploading...</span>
+                ) : (
+                  <>
+                    <UploadIcon className="size-4" />
+                    <span className="text-xs tracking-tight">
+                      {backgroundImage ? "Change Image" : "Upload Image"}
+                    </span>
+                  </>
+                )}
+              </label>
 
-        <ButtonsChin
-          aspectRatio={aspectRatio}
-          setAspectRatio={setAspectRatio}
-          handleImageUpload={handleImageUpload}
-          backgroundImage={backgroundImage}
-          setBackgroundImage={setBackgroundImage}
-          generateNewPalette={generateNewPalette}
-          isGenerating={isGenerating}
-          previousCircles={previousCircles}
-          setCircles={setCircles}
-          setPreviousCircles={setPreviousCircles}
-          setBlur={setBlur}
-          blur={blur}
-        />
-      </motion.section>
+              {backgroundImage && (
+                <Button
+                  onClick={() => {
+                    setBackgroundImage(null);
+                    if (blur === 0) {
+                      setBlur(600);
+                    }
+                  }}
+                  className="rounded-xl mt-2 w-full"
+                  variant="destructive"
+                >
+                  <Trash2Icon className="size-4" />
+                  <span className="text-xs tracking-tight">Remove Image</span>
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {!backgroundImage && (
+            <>
+              <Separator className="my-2" />
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 justify-between">
+                  <label className="text-sm text-muted-foreground">
+                    Palette
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      className="p-0"
+                      onClick={() => {
+                        const newCircle = {
+                          color: colors[circles.length % colors.length],
+                          cx: Math.random() * 100,
+                          cy: Math.random() * 100,
+                        };
+                        setCircles([...circles, newCircle]);
+                        setNumCircles(circles.length + 1);
+                      }}
+                      disabled={numCircles >= 10}
+                    >
+                      <PlusIcon className="size-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="p-0"
+                      onClick={resetPalette}
+                    >
+                      <RotateCcwIcon className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+                {circles.map((circle, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-2 relative w-full"
+                  >
+                    <div
+                      className="flex items-center gap-2 w-full"
+                      onClick={() => {
+                        setActiveColorType("gradient");
+                        setActiveColor(i);
+                        setActiveColorPicker(circle.color);
+                      }}
+                    >
+                      <div className="flex items-center gap-2 relative w-full">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <span
+                              className="w-6 h-6 rounded-full cursor-pointer aspect-square border border-primary/10 absolute left-2 top-1/2 -translate-y-1/2"
+                              style={{ backgroundColor: circle.color }}
+                            />
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-3" align="start">
+                            <HexColorPicker
+                              color={activeColorPicker}
+                              onChange={(color) => {
+                                setActiveColorPicker(color);
+                                handleColorChange(color);
+                              }}
+                            />
+                          </PopoverContent>
+                        </Popover>
+
+                        <Input
+                          type="text"
+                          value={
+                            circle.color.startsWith("#")
+                              ? circle.color
+                              : `#${circle.color}`
+                          }
+                          className="w-full pl-10 pr-4"
+                          placeholder="Color"
+                          onChange={(e) => {
+                            const color = e.target.value.startsWith("#")
+                              ? e.target.value
+                              : `#${e.target.value}`;
+                            updateColor(color, i);
+                          }}
+                        />
+                        <button
+                          className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
+                          onClick={() => {
+                            setCircles(
+                              circles.filter((_, index) => index !== i)
+                            );
+                            setNumCircles(circles.length - 1);
+                          }}
+                        >
+                          <Trash2Icon className="size-4 text-muted-foreground hover:text-destructive transition-all duration-300" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2 w-full bg-secondary rounded-2xl p-4 border border-primary/10">
+          <PositionControl
+            value={textPosition}
+            onChange={setTextPosition}
+            width={resolution.width}
+            height={resolution.height}
+            className="max-w-[140px] max-h-[140px]"
+          />
+        </div>
+      </aside>
+
+      <Dialog open={showGenerateConfirm} onOpenChange={setShowGenerateConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate New Colors</DialogTitle>
+            <DialogDescription>
+              Clicking generate will reset all the colors and create a fresh set
+              of colors.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setShowGenerateConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="accent"
+              onClick={() => {
+                localStorage.setItem("generate-warning-seen", "true");
+                setShowGenerateConfirm(false);
+                handlePaletteChange();
+                setBackgroundImage(null);
+                if (blur === 0) {
+                  setBlur(600);
+                }
+                setIsGenerating(true);
+                setTimeout(() => {
+                  setIsGenerating(false);
+                }, 2000);
+              }}
+            >
+              Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
-}  
+}

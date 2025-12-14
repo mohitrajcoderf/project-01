@@ -1,247 +1,366 @@
 "use client";
 import DesktopApp from "@/components/core-ui/desktop-app";
 import MobileApp from "@/components/core-ui/mobile-app";
-
-import {
-  type CircleProps,
-  type FontOption,
-  FONTS,
-  INITIAL_BACKGROUND_COLORS,
-  INITIAL_COLORS,
-  FILTER_SVG_PATTERNS,
-  RESOLUTIONS
-} from "@/lib/constants";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { toPng } from "html-to-image";
+import { FONTS } from "@/lib/constants";
+import { useWallpaperStore } from "@/store/wallpaper";
+import { useSafariCheck } from "@/hooks/use-safari-check";
 
 export default function Home() {
-  const [colors] = useState(INITIAL_COLORS);
-  const [backgroundColors] = useState(INITIAL_BACKGROUND_COLORS);
-  const [activeColor, setActiveColor] = useState<number | null>(null);
-  const [circles, setCircles] = useState<CircleProps[]>(() =>
-    colors.map((color) => ({
-      color,
-      cx: Math.random() * 100,
-      cy: Math.random() * 100,
-    }))
-  );
-  const [previousCircles, setPreviousCircles] = useState<CircleProps[]>([]);
-  const [text, setText] = useState("MOHIT.");
-  const [fontSize, setFontSizeState] = useState(36);
-  const [blur, setBlur] = useState(200);
-  const [fontWeight, setFontWeight] = useState(800);
-  const [letterSpacing, setLetterSpacing] = useState(-0.02);
-  const [opacity, setOpacity] = useState(100);
-  const [fontFamily, setFontFamilyState] = useState("Onest");
-  const [activeTab, setActiveTab] = useState<"colors" | "text" | "effects">(
-    "text"
-  );
-  const [filterIntensity, setFilterIntensity] = useState(0);
-  const [backgroundColor, setBackgroundColor] = useState("#ffffff");
-  const [lineHeight, setLineHeight] = useState(1.2);
-  const [textColor, setTextColor] = useState("#ffffff");
-  const [filterType, setFilterType] = useState<
-    "pastel" | "film" | "grain" | "static"
-  >("pastel");
-  const [activeColorPicker, setActiveColorPicker] = useState<string>(textColor);
-  const [activeColorType, setActiveColorType] = useState<
-    "text" | "background" | "gradient"
-  >("text");
-  const [resolution, setResolution] = useState<(typeof RESOLUTIONS)[number]>(
-    RESOLUTIONS[0]
-  );
-  const [saturation, setSaturation] = useState(100);
-  const [contrast, setContrast] = useState(100);
-  const [brightness, setBrightness] = useState(100);
-  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-  const [isItalic, setIsItalic] = useState(false);
-  const [isUnderline, setIsUnderline] = useState(false);
-  const [isStrikethrough, setIsStrikethrough] = useState(false);
-  const [modifiedProperties, setModifiedProperties] = useState<Set<string>>(
-    new Set()
-  );
-
-  const fonts: FontOption[] = FONTS;
-
-  const svgToBase64 = (svg: string) => `data:image/svg+xml;base64,${btoa(svg)}`;
-
-  const filterStyle = {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundImage: `url("${svgToBase64(FILTER_SVG_PATTERNS[filterType])}")`,
-    opacity: filterIntensity / 100,
-    mixBlendMode: filterType === "film" ? "multiply" : "soft-light",
-    pointerEvents: "none",
-  } as const;
-
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const { isSafari, shouldShowPWAPrompt, dismissPWAPrompt } = useSafariCheck();
+  const store = useWallpaperStore();
 
   useEffect(() => {
-    const currentFont = fonts.find((f) => f.name === fontFamily);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // 768px is Tailwind's md breakpoint
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    const currentFont = FONTS.find((f) => f.name === store.fontFamily);
     if (!currentFont?.variable) {
       const availableWeights = currentFont?.weights || [];
       const closestWeight = availableWeights.reduce((prev, curr) =>
-        Math.abs(curr - fontWeight) < Math.abs(prev - fontWeight) ? curr : prev
+        Math.abs(curr - store.fontWeight) < Math.abs(prev - store.fontWeight)
+          ? curr
+          : prev
       );
-      setFontWeight(closestWeight);
+      store.setFontWeight(closestWeight);
     }
-  }, [fontFamily]);
+  }, [store.fontFamily]);
 
-  // if (!isCompatibleBrowser) {
-  //  return <MobileApp />;
-  // }
-
-  const updateColor = (newColor: string, index: number) => {
-    setPreviousCircles(circles);
-    const newCircles = [...circles];
-    newCircles[index] = {
-      ...newCircles[index],
-      color: newColor,
-    };
-    setCircles(newCircles);
-  };
+  useEffect(() => {
+    if (shouldShowPWAPrompt) {
+      toast("Install our app for the best experience", {
+        description: "Tap the share button and select 'Add to Home Screen'",
+        duration: Infinity,
+        closeButton: true,
+        onDismiss: dismissPWAPrompt,
+      });
+    }
+  }, [shouldShowPWAPrompt]);
 
   const downloadImage = async () => {
-    const wallpaper = document.getElementById("wallpaper");
-    if (!wallpaper) return;
-
-    setIsDownloading(true);
     try {
-      // Store all original styles
-      const svgElement = wallpaper.querySelector("svg");
-      const originalSvgStyle = svgElement?.getAttribute("style");
-      const originalTransform = wallpaper.style.transform;
-      const originalWidth = wallpaper.style.width;
-      const originalHeight = wallpaper.style.height;
+      const previewCanvas = document.querySelector(
+        "#wallpaper canvas"
+      ) as HTMLCanvasElement;
+      if (!previewCanvas) return;
 
-      // Set download styles
-      wallpaper.style.transform = "none";
-      wallpaper.style.width = `${resolution.width}px`;
-      wallpaper.style.height = `${resolution.height}px`;
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = store.resolution.width;
+      tempCanvas.height = store.resolution.height;
+      const ctx = tempCanvas.getContext("2d")!;
 
-      const dataUrl = await toPng(wallpaper, {
-        width: resolution.width,
-        height: resolution.height,
-        pixelRatio: 1,
-        style: {
-          transform: "none",
-          transformOrigin: "top left",
-        },
-      });
+      // Draw the preview canvas
+      ctx.drawImage(
+        previewCanvas,
+        0,
+        0,
+        store.resolution.width,
+        store.resolution.height
+      );
 
-      // Restore all original styles
-      wallpaper.style.transform = originalTransform;
-      wallpaper.style.width = originalWidth;
-      wallpaper.style.height = originalHeight;
-      if (svgElement && originalSvgStyle) {
-        svgElement.setAttribute("style", originalSvgStyle);
+      // Draw the text
+      if (store.sizeMode === "text") {
+        ctx.save();
+
+        // Set font properties
+        const fontString = `${store.isItalic ? "italic" : ""} ${store.fontWeight
+          } ${store.fontSize * 16}px ${store.fontFamily}`;
+        ctx.font = fontString;
+        ctx.fillStyle = store.textColor;
+        ctx.textAlign = store.textAlign as CanvasTextAlign;
+        ctx.textBaseline = "middle";
+        ctx.globalAlpha = store.opacity / 100;
+
+        // Set text decorations
+        if (store.textShadow.blur > 0) {
+          ctx.shadowColor = store.textShadow.color;
+          ctx.shadowBlur = store.textShadow.blur;
+          ctx.shadowOffsetX = store.textShadow.offsetX;
+          ctx.shadowOffsetY = store.textShadow.offsetY;
+        }
+
+        // Calculate text position
+        let x = store.resolution.width / 2 + store.textPosition.x;
+        if (store.textAlign === "left") {
+          x = 20 + store.textPosition.x;
+        } else if (store.textAlign === "right") {
+          x = store.resolution.width - 20 + store.textPosition.x;
+        }
+
+        // Handle multiline text
+        const lines = store.text.split("\n");
+        const lineHeight = store.fontSize * 16 * store.lineHeight;
+        const totalHeight = lines.length * lineHeight;
+        const startY =
+          store.resolution.height / 2 - totalHeight / 2 + store.textPosition.y;
+
+        lines.forEach((line, index) => {
+          const y = startY + index * lineHeight + lineHeight / 2;
+          ctx.fillText(line, x, y);
+
+          // Draw text decorations
+          if (store.isUnderline || store.isStrikethrough) {
+            const textMetrics = ctx.measureText(line);
+            const textWidth = textMetrics.width;
+            let decorationY = y;
+
+            if (store.isUnderline) {
+              decorationY = y + textMetrics.actualBoundingBoxDescent + 2;
+            }
+            if (store.isStrikethrough) {
+              decorationY = y;
+            }
+
+            let startX = x;
+            if (store.textAlign === "center") {
+              startX = x - textWidth / 2;
+            } else if (store.textAlign === "right") {
+              startX = x - textWidth;
+            }
+
+            ctx.beginPath();
+            ctx.strokeStyle = store.textColor;
+            ctx.lineWidth = Math.max(1, store.fontSize * 0.05);
+            ctx.moveTo(startX, decorationY);
+            ctx.lineTo(startX + textWidth, decorationY);
+            ctx.stroke();
+          }
+        });
+
+        ctx.restore();
       }
 
-      const link = document.createElement("a");
-      link.download = `gradiiii-${resolution.width}x${resolution.height}.png`;
-      link.href = dataUrl;
+      if (store.sizeMode === "image" && store.logoImage) {
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = store.logoImage as string;
+        });
 
-      const downloadPromise = new Promise((resolve) => {
+        const maxWidth = store.resolution.width * 0.5;
+        const maxHeight = store.resolution.height * 0.5;
+        const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
+        const width = img.width * scale;
+        const height = img.height * scale;
+
+        ctx.save();
+        ctx.globalAlpha = store.opacity / 100;
+        ctx.filter = `drop-shadow(${store.textShadow.offsetX}px ${store.textShadow.offsetY}px ${store.textShadow.blur}px ${store.textShadow.color})`;
+        ctx.drawImage(
+          img,
+          store.resolution.width / 2 - width / 2 + store.textPosition.x,
+          store.resolution.height / 2 - height / 2 + store.textPosition.y,
+          width,
+          height
+        );
+        ctx.restore();
+      }
+
+      // Handle download based on browser
+      if (isSafari) {
+        const dataUrl = tempCanvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.href = dataUrl;
+        link.download = `gradiiii-${store.resolution.width}x${store.resolution.height}.png`;
         link.click();
-        resolve(true);
-      });
+      } else {
+        const blob = await new Promise<Blob>((resolve) =>
+          tempCanvas.toBlob((blob) => resolve(blob!), "image/png")
+        );
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `gradiiii-${store.resolution.width}x${store.resolution.height}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
 
-      toast.promise(downloadPromise, {
-        loading: "Downloading image...",
-        success: "Downloaded image successfully",
-        error: "Failed to downlaod image",
-      });
+      toast.success("Download will start shortly");
     } catch (err) {
       console.error(err);
       toast.error("Failed to download image");
-    } finally {
-      setIsDownloading(false);
     }
   };
 
-  const generateNewPalette = () => {
-    setIsGenerating(true);
+  const copyImage = async () => {
     try {
-      setPreviousCircles(circles);
-      setCircles(
-        circles.map((circle) => ({
-          ...circle,
-          cx: Math.random() * 100,
-          cy: Math.random() * 100,
-        }))
+      const previewCanvas = document.querySelector(
+        "#wallpaper canvas"
+      ) as HTMLCanvasElement;
+      if (!previewCanvas) return;
+
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = store.resolution.width;
+      tempCanvas.height = store.resolution.height;
+      const ctx = tempCanvas.getContext("2d")!;
+
+      // Draw the preview canvas
+      ctx.drawImage(
+        previewCanvas,
+        0,
+        0,
+        store.resolution.width,
+        store.resolution.height
       );
 
-      if (!modifiedProperties.has("filterIntensity")) {
-        setFilterIntensity(Math.floor(Math.random() * (100 - 30) + 30));
+      // Handle text/logo drawing same as download
+      if (store.sizeMode === "text") {
+        ctx.save();
+
+        // Set font properties
+        const fontString = `${store.isItalic ? "italic" : ""} ${store.fontWeight
+          } ${store.fontSize * 16}px ${store.fontFamily}`;
+        ctx.font = fontString;
+        ctx.fillStyle = store.textColor;
+        ctx.textAlign = store.textAlign as CanvasTextAlign;
+        ctx.textBaseline = "middle";
+        ctx.globalAlpha = store.opacity / 100;
+
+        // Set text decorations
+        if (store.textShadow.blur > 0) {
+          ctx.shadowColor = store.textShadow.color;
+          ctx.shadowBlur = store.textShadow.blur;
+          ctx.shadowOffsetX = store.textShadow.offsetX;
+          ctx.shadowOffsetY = store.textShadow.offsetY;
+        }
+
+        // Calculate text position
+        let x = store.resolution.width / 2 + store.textPosition.x;
+        if (store.textAlign === "left") {
+          x = 20 + store.textPosition.x;
+        } else if (store.textAlign === "right") {
+          x = store.resolution.width - 20 + store.textPosition.x;
+        }
+
+        // Handle multiline text
+        const lines = store.text.split("\n");
+        const lineHeight = store.fontSize * 16 * store.lineHeight;
+        const totalHeight = lines.length * lineHeight;
+        const startY =
+          store.resolution.height / 2 - totalHeight / 2 + store.textPosition.y;
+
+        lines.forEach((line, index) => {
+          const y = startY + index * lineHeight + lineHeight / 2;
+          ctx.fillText(line, x, y);
+
+          // Draw text decorations
+          if (store.isUnderline || store.isStrikethrough) {
+            const textMetrics = ctx.measureText(line);
+            const textWidth = textMetrics.width;
+            let decorationY = y;
+
+            if (store.isUnderline) {
+              decorationY = y + textMetrics.actualBoundingBoxDescent + 2;
+            }
+            if (store.isStrikethrough) {
+              decorationY = y;
+            }
+
+            let startX = x;
+            if (store.textAlign === "center") {
+              startX = x - textWidth / 2;
+            } else if (store.textAlign === "right") {
+              startX = x - textWidth;
+            }
+
+            ctx.beginPath();
+            ctx.strokeStyle = store.textColor;
+            ctx.lineWidth = Math.max(1, store.fontSize * 0.05);
+            ctx.moveTo(startX, decorationY);
+            ctx.lineTo(startX + textWidth, decorationY);
+            ctx.stroke();
+          }
+        });
+
+        ctx.restore();
       }
 
-      if (!modifiedProperties.has("filterType")) {
-        const filterTypes: ("pastel" | "film" | "grain" | "static")[] = [
-          "pastel",
-          "film",
-          "grain",
-          "static",
-        ];
-        setFilterType(
-          filterTypes[Math.floor(Math.random() * filterTypes.length)]
+      if (store.sizeMode === "image" && store.logoImage) {
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = store.logoImage as string;
+        });
+
+        const maxWidth = (store.resolution.width * store.fontSize) / 100; // Convert percentage to pixels
+        const maxHeight = (store.resolution.height * store.fontSize) / 100;
+        const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
+        const width = img.width * scale;
+        const height = img.height * scale;
+
+        ctx.save();
+        ctx.globalAlpha = store.opacity / 100;
+        ctx.filter = `drop-shadow(${store.textShadow.offsetX}px ${store.textShadow.offsetY}px ${store.textShadow.blur}px ${store.textShadow.color})`;
+        ctx.drawImage(
+          img,
+          store.resolution.width / 2 - width / 2 + store.textPosition.x,
+          store.resolution.height / 2 - height / 2 + store.textPosition.y,
+          width,
+          height
         );
+        ctx.restore();
       }
 
-      if (!modifiedProperties.has("backgroundColor")) {
-        const randomColor =
-          backgroundColors[Math.floor(Math.random() * backgroundColors.length)];
-        setBackgroundColor(randomColor);
-      }
-
-      if (!modifiedProperties.has("fontFamily")) {
-        const randomFont = fonts[Math.floor(Math.random() * fonts.length)];
-        setFontFamily(randomFont.name);
-      }
-
-      if (!modifiedProperties.has("fontWeight")) {
-        const randomFont = fonts[Math.floor(Math.random() * fonts.length)];
-        const availableWeights = randomFont?.weights || [
-          100, 200, 300, 400, 500, 600, 700, 800, 900,
-        ];
-        setFontWeight(
-          availableWeights[Math.floor(Math.random() * availableWeights.length)]
+      // Convert to blob and copy
+      try {
+        // Try modern Clipboard API first
+        const blob = await new Promise<Blob>((resolve) =>
+          tempCanvas.toBlob((blob) => resolve(blob!), "image/png")
         );
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "image/png": blob,
+          }),
+        ]);
+      } catch (e) {
+        console.error(e);
+        // Fallback for Safari
+        const dataUrl = tempCanvas.toDataURL("image/png");
+        const textArea = document.createElement("textarea");
+        textArea.value = dataUrl;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand("copy");
+          document.body.removeChild(textArea);
+        } catch (err) {
+          document.body.removeChild(textArea);
+          console.error(err);
+          throw new Error("Failed to copy to clipboard");
+        }
       }
 
-      if (!modifiedProperties.has("fontSize")) {
-        const fontSizes = [24, 28, 32, 36, 40, 44, 48, 52, 56, 60];
-        setFontSize(fontSizes[Math.floor(Math.random() * fontSizes.length)]);
-      }
-
-      if (!modifiedProperties.has("letterSpacing")) {
-        setLetterSpacing(Number((Math.random() * 0.15 - 0.05).toFixed(2)));
-      }
-
-      toast.success("Generated new palette!");
+      toast.success("Image copied to clipboard");
     } catch (err) {
-      console.error("Failed to generate new palette:", err);
-      toast.error("Failed to generate new palette");
-    } finally {
-      setIsGenerating(false);
+      console.error(err);
+      toast.error("Failed to copy image");
     }
   };
 
   const handleColorChange = (color: string) => {
-    switch (activeColorType) {
+    switch (store.activeColorType) {
       case "text":
-        setTextColor(color);
+        store.setTextColor(color);
         break;
       case "background":
-        setBackgroundColor(color);
+        store.setBackgroundColor(color);
         break;
       case "gradient":
-        if (activeColor !== null) {
-          updateColor(color, activeColor);
+        if (store.activeColor !== null) {
+          store.updateColor(color, store.activeColor);
         }
         break;
     }
@@ -273,7 +392,7 @@ export default function Home() {
       const loadPromise = new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
-          setBackgroundImage(reader.result as string);
+          store.backgroundImage = reader.result as string;
           resolve(true);
         };
         img.onerror = reject;
@@ -290,89 +409,151 @@ export default function Home() {
     reader.readAsDataURL(file);
   };
 
-  const trackPropertyModification = (property: string) => {
-    setModifiedProperties((prev) => new Set(prev).add(property));
+  const handlePaletteChange = () => {
+    const generateHarmonious = () => {
+      // Color schemes with more variety
+      const schemes = [
+        { hueStep: 30, count: Math.floor(Math.random() * 6) + 3 }, // Analogous
+        { hueStep: 120, count: Math.floor(Math.random() * 4) + 3 }, // Triadic
+        { hueStep: 180, count: Math.floor(Math.random() * 4) + 2 }, // Split complementary
+        { hueStep: 60, count: Math.floor(Math.random() * 6) + 3 }, // Hexadic
+        { hueStep: 90, count: Math.floor(Math.random() * 4) + 3 }, // Square
+        { hueStep: 45, count: Math.floor(Math.random() * 5) + 3 }, // Custom angle
+      ];
+
+      const scheme = schemes[Math.floor(Math.random() * schemes.length)];
+      const baseHue = Math.random() * 360;
+
+      // Enhanced saturation and lightness ranges
+      const satRanges = [
+        { min: 70, max: 90 }, // Vibrant
+        { min: 40, max: 60 }, // Muted
+        { min: 85, max: 100 }, // Super saturated
+        { min: 55, max: 75 }, // Balanced
+      ];
+
+      const lightRanges = [
+        { min: 40, max: 60 }, // Medium
+        { min: 60, max: 80 }, // Light
+        { min: 20, max: 40 }, // Dark
+        { min: 30, max: 70 }, // Wide range
+      ];
+
+      // Generate background color with contrasting settings
+      const bgHue = (baseHue + 180) % 360;
+      const bgSat = 20 + Math.random() * 40;
+      const bgLight =
+        Math.random() > 0.5
+          ? 10 + Math.random() * 20 // Dark background
+          : 80 + Math.random() * 15; // Light background
+
+      // Set background color
+      const backgroundColor = hslToHex(bgHue, bgSat, bgLight);
+      store.setBackgroundColor(backgroundColor);
+
+      // Text color: pure white or black based on background, with slight variation
+      const textLight =
+        bgLight < 50
+          ? 95 + Math.random() * 5 // Almost white for dark backgrounds (95-100%)
+          : Math.random() * 5; // Almost black for light backgrounds (0-5%)
+
+      const textColor = hslToHex(0, 0, textLight); // Hue and saturation 0 for pure grayscale
+      store.setTextColor(textColor);
+
+      // Glow: slightly less extreme than text for subtle effect
+      const glowLight =
+        bgLight < 50
+          ? textLight - (10 + Math.random() * 15) // Slightly darker than white text
+          : textLight + (10 + Math.random() * 15); // Slightly lighter than black text
+
+      store.setTextShadow({
+        color: hslToHex(0, 0, glowLight), // Pure grayscale glow
+        blur: store.textShadow.blur, // Smaller blur range for subtlety
+        offsetX: store.textShadow.offsetX,
+        offsetY: store.textShadow.offsetY,
+      });
+
+      const satRange = satRanges[Math.floor(Math.random() * satRanges.length)];
+      const lightRange =
+        lightRanges[Math.floor(Math.random() * lightRanges.length)];
+
+      // Generate base colors from the scheme
+      const baseColors = Array.from({ length: scheme.count }, (_, i) => {
+        const hue = (baseHue + i * scheme.hueStep) % 360;
+        const sat =
+          satRange.min + Math.random() * (satRange.max - satRange.min);
+        const light =
+          lightRange.min + Math.random() * (lightRange.max - lightRange.min);
+        return { h: hue, s: sat, l: light };
+      });
+
+      // Add variations with more diverse modifications
+      const colors = baseColors.flatMap((base) => {
+        const variations = [base];
+
+        // Random chance for additional variations
+        if (Math.random() > 0.3) {
+          variations.push({
+            h: (base.h + 15 - Math.random() * 30) % 360, // Slight hue shift
+            s: Math.max(20, Math.min(100, base.s + (Math.random() * 30 - 15))),
+            l: Math.max(10, Math.min(90, base.l + (Math.random() * 40 - 20))),
+          });
+        }
+        return variations;
+      });
+
+      // Convert HSL to Hex
+      return colors.map(({ h, s, l }) => hslToHex(h, s, l));
+    };
+
+    // Helper function to convert HSL to Hex
+    const hslToHex = (h: number, s: number, l: number) => {
+      const hue = h / 360;
+      const sat = s / 100;
+      const light = l / 100;
+
+      const c = (1 - Math.abs(2 * light - 1)) * sat;
+      const x = c * (1 - Math.abs(((hue * 6) % 2) - 1));
+      const m = light - c / 2;
+
+      let r, g, b;
+      if (hue < 1 / 6) [r, g, b] = [c, x, 0];
+      else if (hue < 2 / 6) [r, g, b] = [x, c, 0];
+      else if (hue < 3 / 6) [r, g, b] = [0, c, x];
+      else if (hue < 4 / 6) [r, g, b] = [0, x, c];
+      else if (hue < 5 / 6) [r, g, b] = [x, 0, c];
+      else[r, g, b] = [c, 0, x];
+
+      const toHex = (n: number) => {
+        const hex = Math.round((n + m) * 255).toString(16);
+        return hex.length === 1 ? "0" + hex : hex;
+      };
+
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    };
+
+    const newColors = generateHarmonious();
+    store.setCircles(
+      newColors.map((color, i) => ({
+        color,
+        cx: store.circles[i]?.cx ?? Math.random() * 100,
+        cy: store.circles[i]?.cy ?? Math.random() * 100,
+      }))
+    );
   };
 
-  // Modify the relevant setters
-  const setFontSize = (value: number) => {
-    trackPropertyModification("fontSize");
-    setFontSizeState(value);
-  };
-
-  const setFontFamily = (value: string) => {
-    trackPropertyModification("fontFamily");
-    setFontFamilyState(value);
-  };
+  const AppComponent = isMobile ? MobileApp : DesktopApp;
 
   return (
-    <>
-      <div className="md:hidden">
-        <MobileApp />
-      </div>
-      <div className="hidden md:block">
-        <DesktopApp
-          backgroundColor={backgroundColor}
-          blur={blur}
-          setBlur={setBlur}
-          activeTab={activeTab}
-          fontSize={fontSize}
-          fontWeight={fontWeight}
-          letterSpacing={letterSpacing}
-          fontFamily={fontFamily}
-          opacity={opacity}
-          lineHeight={lineHeight}
-          text={text}
-          circles={circles}
-          filterIntensity={filterIntensity}
-          filterStyle={filterStyle}
-          textColor={textColor}
-          generateNewPalette={generateNewPalette}
-          isGenerating={isGenerating}
-          downloadImage={downloadImage}
-          isDownloading={isDownloading}
-          fonts={fonts}
-          activeColorPicker={activeColorPicker}
-          filterType={filterType}
-          setFilterIntensity={setFilterIntensity}
-          setFilterType={setFilterType}
-          setTextColor={setTextColor}
-          setText={setText}
-          setFontFamily={setFontFamily}
-          setFontSize={setFontSize}
-          setFontWeight={setFontWeight}
-          setLetterSpacing={setLetterSpacing}
-          setOpacity={setOpacity}
-          setLineHeight={setLineHeight}
-          setBackgroundColor={setBackgroundColor}
-          setActiveColorPicker={setActiveColorPicker}
-          handleColorChange={handleColorChange}
-          setActiveColorType={setActiveColorType}
-          setActiveColor={setActiveColor}
-          updateColor={updateColor}
-          previousCircles={previousCircles}
-          setCircles={setCircles}
-          setPreviousCircles={setPreviousCircles}
-          setActiveTab={setActiveTab}
-          resolution={resolution}
-          setResolution={setResolution}
-          saturation={saturation}
-          setSaturation={setSaturation}
-          contrast={contrast}
-          setContrast={setContrast}
-          brightness={brightness}
-          setBrightness={setBrightness}
-          backgroundImage={backgroundImage}
-          handleImageUpload={handleImageUpload}
-          setBackgroundImage={setBackgroundImage}
-          isItalic={isItalic}
-          setIsItalic={setIsItalic}
-          isUnderline={isUnderline}
-          setIsUnderline={setIsUnderline}
-          isStrikethrough={isStrikethrough}
-          setIsStrikethrough={setIsStrikethrough}
-        />
-      </div>
-    </>
+    <AppComponent
+      {...store}
+      fonts={FONTS}
+      isSafari={isSafari}
+      downloadImage={downloadImage}
+      copyImage={copyImage}
+      handleColorChange={handleColorChange}
+      handleImageUpload={handleImageUpload}
+      handlePaletteChange={handlePaletteChange}
+    />
   );
 }

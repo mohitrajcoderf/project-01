@@ -14,7 +14,7 @@ import {
 import Link from "next/link";
 import logo from "@/public/logo.svg";
 import Image from "next/image";
-import gradientWallpaper from "@/public/GRADIIII.png";
+import gradientWallpaper from "@/public/gradii-logo.png";
 import { motion } from "motion/react";
 import { IMAGES } from "@/assets";
 import Marquee from "./marquee";
@@ -40,14 +40,14 @@ export function SidebarHeader() {
         const lastSeenVersion = localStorage.getItem("gradiiLastSeenVersion");
         if (!lastSeenVersion || lastSeenVersion !== CURRENT_VERSION) {
             setOpen(true);
-            localStorage.setItem("grediiiiLastSeenVersion", "CURRENT_VERSION");
+            localStorage.setItem("gradiiLastSeenVersion", CURRENT_VERSION);
         }
     }, []);
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <button className="flex items-center justify-between w-full outline-none focus:outline-hidden group">
+                <button className="flex items-center justify-between w-full outline-hidden focus:outline-hidden group">
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
                             <Image
@@ -57,10 +57,10 @@ export function SidebarHeader() {
                                 priority
                                 loading="eager"
                             />
-                            <p className="text-lg font-bold tracking-tighter"> Gradiiii </p>
+                            <p className="text-lg font-bold tracking-tighter">Gradii</p>
                         </div>
                     </div>
-                    <span className="text-xs text-muted-foreground hover:text-primary transition-colors duration-300">
+                    <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors duration-300 p-2">
                         <InfoIcon className="size-4" />
                     </span>
                 </button>
@@ -172,7 +172,7 @@ export function SidebarHeader() {
                     <p className="text-sm text-muted-foreground mx-auto">
                         Found a bug or have feedback? Feel free to{" "}
                         <Link
-                            href="https://x.com/MohitRaj_IN"
+                            href="https://x.com/kshvbgde"
                             target="_blank"
                             className="text-primary hover:underline"
                         >
